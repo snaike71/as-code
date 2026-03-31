@@ -1,0 +1,64 @@
+services:
+  registry:
+    image: registry:2
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/registry.password
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Origin: "['http://{{ registry_public_ip }}']"
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Methods: "['HEAD', 'GET', 'OPTIONS', 'DELETE']"
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Headers: "['Authorization', 'Accept', 'Cache-Control']"
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Credentials: "['true']"
+      REGISTRY_HTTP_HEADERS_Access-Control-Expose-Headers: "['Docker-Content-Digest']"
+    volumes:
+      - ./data:/var/lib/registry
+      - ./auth:/auth:ro
+
+  ui:
+    image: joxit/docker-registry-ui:main
+    restart: always
+    ports:
+      - "80:80"
+    environment:
+      - REGISTRY_TITLE=AWS Simple Registry
+      - REGISTRY_URL=http://{{ registry_public_ip }}:5000
+      - SINGLE_REGISTRY=true
+      - DELETE_IMAGES=true
+    depends_on:
+      - registry
+services:
+  registry:
+    image: registry:2
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/registry.password
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Origin: "['http://{{ registry_public_ip }}']"
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Methods: "['HEAD', 'GET', 'OPTIONS', 'DELETE']"
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Headers: "['Authorization', 'Accept', 'Cache-Control']"
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Credentials: "['true']"
+      REGISTRY_HTTP_HEADERS_Access-Control-Expose-Headers: "['Docker-Content-Digest']"
+    volumes:
+      - ./data:/var/lib/registry
+      - ./auth:/auth:ro
+
+  ui:
+    image: joxit/docker-registry-ui:main
+    restart: always
+    ports:
+      - "80:80"
+    environment:
+      - REGISTRY_TITLE=AWS Simple Registry
+      - REGISTRY_URL=http://{{ registry_public_ip }}:5000
+      - SINGLE_REGISTRY=true
+      - DELETE_IMAGES=true
+    depends_on:
+      - registry

@@ -1,0 +1,65 @@
+- name: Deploy simple private Docker registry
+  hosts: registry
+  become: true
+  vars:
+    registry_dir: /home/ubuntu/registry
+    registry_admin_user: admin
+    registry_admin_password: password
+
+  tasks:
+    - name: Refresh apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install Docker engine, Compose plugin and htpasswd utility
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - docker-compose-v2
+          - apache2-utils
+        state: present
+
+    - name: Ensure docker service is enabled and started
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add ubuntu user to docker group
+      ansible.builtin.user:
+        name: ubuntu
+        groups: docker
+        append: true
+
+    - name: Create registry directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+      loop:
+        - "{{ registry_dir }}"
+        - "{{ registry_dir }}/auth"
+        - "{{ registry_dir }}/data"
+
+    - name: Generate htpasswd file for registry auth
+      ansible.builtin.command:
+        cmd: "htpasswd -Bbc {{ registry_dir }}/auth/registry.password {{ registry_admin_user }} {{ registry_admin_password }}"
+        creates: "{{ registry_dir }}/auth/registry.password"
+
+    - name: Deploy docker compose stack file
+      ansible.builtin.template:
+        src: templates/docker-compose.yml.j2
+        dest: "{{ registry_dir }}/docker-compose.yml"
+        owner: ubuntu
+        group: ubuntu
+        mode: "0644"
+      vars:
+        registry_public_ip: "{{ hostvars[inventory_hostname].ansible_host }}"
+
+    - name: Start registry stack
+      ansible.builtin.command:
+        cmd: docker compose up -d
+        chdir: "{{ registry_dir }}"
